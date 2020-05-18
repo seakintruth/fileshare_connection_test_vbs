@@ -11,6 +11,7 @@ Function FileShareConnectionTest()
         MsgBox "Error, failed to find file " & strcConfigIniFile, vbCritical, "FileShareConnectionTest"
         Exit Function
     End If
+    'Read variables in from the Config.ini file
     Dim intPingCount
     intPingCount = CInt(GetIniValue(strConfigIniFilePath, "Connection", "PingCount"))
     Dim intMaxPingResponseTime
@@ -23,19 +24,21 @@ Function FileShareConnectionTest()
     dblTimeTransferSmallMax = CDbl(GetIniValue(strConfigIniFilePath, "Connection", "TimeTransferSmallMax"))
     Dim dblMediumFileSizeMb
     dblMediumFileSizeMb = CDbl(GetIniValue(strConfigIniFilePath, "Connection", "MediumFileSizeMb"))
+    Dim dblTimeTransferMediumMax
+    dblTimeTransferMediumMax = CDbl(GetIniValue(strConfigIniFilePath, "Connection", "TimeTransferMediumMax"))
     Dim strNetworkSaveFolder
     strNetworkSaveFolder = GetIniValue(strConfigIniFilePath, "Connection", "NetworkSaveFolder")
     Dim strLogPathName
     strLogPathName = GetIniValue(strConfigIniFilePath, "Connection", "LogPathName")
     Dim strPrebuiltRandomFileName
     strPrebuiltRandomFileName = GetIniValue(strConfigIniFilePath, "Connection", "PrebuiltRandomFileName")
-
+    
     Dim fNetworkStable
     fNetworkStable = True
     Dim wshShell 'as object
     Dim fso 'as object
     Dim fil 'as object
-    
+   
     Dim strLogPath
     strLogPath = IIf( _
         FolderExists(strNetworkSaveFolder), _
@@ -71,10 +74,19 @@ Function FileShareConnectionTest()
     Dim lngMediumFileSizeActual
     dblStartTimeMedium = Timer()
     If FileExists(strPreBuiltRandomFilePath) Then
-        'Just appending a line to make the file unique
-        lngMediumFileSizeActual = AppendRandomLineToFile(strPreBuiltRandomFilePath, strLocalMediumTempFilePath)
+        'Building a 2 MB, just takes too long so we try appending a line to the prebuilt file to make the file unique
+        AppendRandomLineToFile strPreBuiltRandomFilePath, clngCharactersPerLine
+        'strLocalMediumTempFilePath)
+        CopyFile strPreBuiltRandomFilePath, strLocalMediumTempFilePath
+        If FileExists(strLocalMediumTempFilePath) Then
+            lngMediumFileSizeActual = FileSize(strLocalMediumTempFilePath)
+        Else
+            lngMediumFileSizeActual = 0
+        End If
     Else
-        'Takes 9 seconds for 2 MB, just too long to build.
+        lngMediumFileSizeActual = 0
+    End If
+    If lngMediumFileSizeActual = 0 Then
         lngMediumFileSizeActual = BuildRandomFile(strLocalSmallTempFilePath, dblMediumFileSizeMb * (2 ^ 10) * (2 ^ 10))
         'If we had to make this file, we will copy it to the prebuilt location so we don't have to make it again
         CopyFile strLocalSmallTempFilePath, strPreBuiltRandomFilePath
@@ -161,21 +173,32 @@ Function FileShareConnectionTest()
     If fNetworkStable Then
         Dim strTransferSpeedResults
         Dim dblStartTimeMediumTransfer
-        dblStartTimeMediumTransfer = Timer()
-        CopyFile strLocalMediumTempFilePath, strNetworkCheckFilePathMedium
         Dim dblUploadMediumTime
+        If FileExists(strNetworkCheckFilePathMedium) Then
+            DeleteFile strNetworkCheckFilePathMedium
+        End If
+        dblStartTimeMediumTransfer = Timer()
+        'Test File Upload Time
+        CopyFile strLocalMediumTempFilePath, strNetworkCheckFilePathMedium
         dblUploadMediumTime = Timer() - dblStartSmallTransferTime
         If FileExists(strNetworkCheckFilePathMedium) Then
             dblStartTimeMediumTransfer = Timer()
-            CopyFile strLocalMediumTempFilePath, strNetworkCheckFilePathMedium
+            If FileExists(strLocalMediumTempFilePath) Then
+                DeleteFile strLocalMediumTempFilePath
+            End If
+            'Test File Download Time
+            CopyFile strNetworkCheckFilePathMedium, strLocalMediumTempFilePath
             Dim dblDownloadMediumTime
             dblDownloadMediumTime = Timer() - dblStartSmallTransferTime
             strTransferSpeedResults = "Success;"
+            If ((dblUploadMediumTime + dblDownloadMediumTime) / 2) > dblTimeTransferMediumMax Then
+                fNetworkStable = False
+            End If
         Else
-            strTransferSpeedResults = "Failed;"
+            strTransferSpeedResults = "Failed to Upload file: " & strNetworkCheckFilePathMedium & ";"
             fNetworkStable = False
         End If
-    strTransferSpeedResults = strTransferSpeedResults & "Upload time = " & dblUploadMediumTime & "; Download time = " & dblDownloadMediumTime
+        strTransferSpeedResults = strTransferSpeedResults & "Upload time = " & dblUploadMediumTime & "; Download time = " & dblDownloadMediumTime
         WriteToLog _
              "File Transfer Test:" & strTransferSpeedResults, _
              strLogPath, _
@@ -198,8 +221,7 @@ Function FileShareConnectionTest()
             vbCritical + vbOKOnly, _
             "MS Access: Fileshare Connection"
 
-	'[TODO] Replace CITRIX login tutorial with your custom tutoral for users
-        OpenWithExplorer "https://support.citrix.com/article/CTX220025"
+        OpenWithExplorer strScriptPath & "\" & "documentation" & "\" & "Use CITRIX to Run Access Database.htm"
     End If
 End Function
 
@@ -291,7 +313,7 @@ Function BuildRandomFile(strFilePath, dblFileSizeMinimum)
     Const ForAppending = 8
     'Length of Lines
     'Each character is a byte, and the cariage return line feed at the end of each line is two bytes.
-    Const lLines = 500
+    Const clngCharactersPerLine = 500
     'Number of lines to write between each file size check ~ 341 lines of 300 characters is 100KB
     Dim fso
     Set fso = CreateObject("Scripting.FileSystemObject")
@@ -301,8 +323,8 @@ Function BuildRandomFile(strFilePath, dblFileSizeMinimum)
     Dim strOut 'as string
     strOut = ""
     Do
-        strOut = strOut & RandomString(lLines)
-        dblCurrentSize = dblCurrentSize + lLines
+        strOut = strOut & RandomString(clngCharactersPerLine)
+        dblCurrentSize = dblCurrentSize + clngCharactersPerLine
     Loop Until dblCurrentSize > dblFileSizeMinimum
     Dim tf
     'Write what's in memory to the file
@@ -316,10 +338,20 @@ Function BuildRandomFile(strFilePath, dblFileSizeMinimum)
     BuildRandomFile = fso.GetFile(strFilePath).Size
 End Function
 
-Function AppendRandomLineToFile(strPreBuiltRandomFilePath, strLocalMediumTempFilePath)
+Function FileSize(filePath)
+On Error Resume Next
+Dim fso
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    Set fil = fso.GetFile(filePath)
+    FileSize = fil.Size
+    'Cleanup
+    Set fil = Nothing
+End Function
+
+Function AppendRandomLineToFile(strPreBuiltRandomFilePath, lngCharactersPerLine)
+On Error Resume Next
     Const ForAppending = 8
     'Length of the line to add.
-    Const lLines = 300
     Dim fso
     Set fso = CreateObject("Scripting.FileSystemObject")
     Dim dblCurrentSize 'As Double
@@ -330,13 +362,10 @@ Function AppendRandomLineToFile(strPreBuiltRandomFilePath, strLocalMediumTempFil
        ForAppending, _
        True _
     )
-    tf.WriteLine (RandomString(lLines))
+    tf.WriteLine (RandomString(lngCharactersPerLine))
     tf.Close
-    Dim fil
-    Set fil = fso.GetFile(strPreBuiltRandomFilePath)
-    fil.Copy strLocalMediumTempFilePath
-    AppendRandomLineToFile = fil.Size
-    Set fil = Nothing
+    'Cleanup
+    Set tf = Nothing
 End Function
 
 Function PingResponseTime(hostname) ' As Double
