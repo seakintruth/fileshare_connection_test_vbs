@@ -220,8 +220,7 @@ Function FileShareConnectionTest()
             "If you are connected over a VPN you must use CITRIX to connect, a ""how to"" guide will now open in your browser.", _
             vbCritical + vbOKOnly, _
             "MS Access: Fileshare Connection"
-
-        OpenWithExplorer strScriptPath & "\" & "documentation" & "\" & "Use CITRIX to Run Access Database.htm"
+        OpenWithExplorer "https://support.citrix.com/article/CTX220025"
     End If
 End Function
 
