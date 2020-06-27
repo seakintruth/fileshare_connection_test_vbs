@@ -527,7 +527,7 @@ Sub WriteSpeedTestToLog( _
             objNetwork.UserName & "," & _
             objNetwork.ComputerName & "," & _
             HandleCsvColumn(Now()) & "," & _
-            HandleCsvColumn(strScriptName) & "," & _
+            HandleCsvColumn(strScriptName) & "," 
     End If 
     strLineToWrite = strLineToWrite & _ 
         HandleCsvColumn(Trim(aryContent(0))) & "," & _
