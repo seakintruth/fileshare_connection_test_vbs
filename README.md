@@ -19,10 +19,6 @@ This script can be incorporated into any MS access database that has a backend o
 # Modify this script for your needs
 Look for `[TODO]` comments in the [Config.ini](/app/Config.ini) and [Fileshare-Connection-Test.vbs](/app/Fileshare-Connection-Test.vbs) files
 
-<<<<<<< HEAD
-# Project
-VBS, VBA, HTA
-=======
 # Problems and feedback 
 Report any problems with this script as a [new issue](https://github.com/seakintruth/fileshare_connection_test_vbs/issues/new)
->>>>>>> 4f0f0c2b8c0fc9ad959522f4cf1ee3e8b6934c20
+
