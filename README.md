@@ -11,7 +11,7 @@ Implementing this script in/as an Access database launching script attempts to p
 To date Microsoft Access databases can't be run directly on a fileshare over the internet. Connecting to MS Access databases over the internet does not work, and often corrupts the database. "It's important to understand that any time an Access client disconnects unexpectedly, it may set a "corruption flag" https://www.kzsoftware.com/articles/PreventAccessDatabaseCorruption
 
 # CITRIX Connection
-While connected to the file share over a VPN users must connect to a CITRIX virtual machine if they need to update a MS Access database on the network. When the script finds that a speed check fails the script launches a how to guide defined in the config.ini file i.e. [Use CITRIX to Run Access Database.pdf](./app/documentation/Use CITRIX to Run Access Database.pdf) and Internet Explorer to the CITRIX launcher.
+While connected to the file share over a VPN users must connect to a CITRIX virtual machine if they need to update a MS Access database on the network. When the script finds that a speed check fails the script launches a how to guide defined in the config.ini file.
 
 # Generic Script
 This script can be incorporated into any MS access database that has a backend on the network it is published to:
@@ -21,4 +21,3 @@ Look for `[TODO]` comments in the [Config.ini](/app/Config.ini) and [Fileshare-C
 
 # Problems and feedback 
 Report any problems with this script as a [new issue](https://github.com/seakintruth/fileshare_connection_test_vbs/issues/new)
-
